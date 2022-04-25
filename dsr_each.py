@@ -29,15 +29,15 @@ def SelectMac():
     maclist = [item[0] for item in c.fetchall()]
 ####  DB ####
 
-def Sniffing():
-    pcap_file = sniff(prn=ControlPacket,count=1,filter="tcp and ether dst %s" %router_mac)
-
-def ShowPacket(packet):
-    t=threading.Thread(target=ControlPacket,args=packet)
+def ShowPacket():
+    t=threading.Thread(target=Sniffing)
     print("THREAD ="+str(t.name))
     t.start()
     print("ALIVE "+t.name+" :"+ str(t.is_alive()))
     print("Alive all :"+ str(threading.active_count()))
+
+def Sniffing():
+    pcap_file = sniff(prn=ControlPacket,count=1,filter="tcp and ether dst %s" %router_mac)
 
 def ControlPacket(packet):
     global maclist
@@ -58,5 +58,5 @@ ConnectDB()
 SelectMac()
 
 while(1):
-    Sniffing()
+    ShowPacket()
 ####### 스레드 없이 진행 .
