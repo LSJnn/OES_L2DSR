@@ -27,11 +27,12 @@ def ConnectDB():
 
 def SelectMac():
     global maclist
-    c = con.cursor()
-
-    sql = "SELECT mac from TB_MAC"
-    c.execute(sql)
-    maclist = [item[0] for item in c.fetchall()]
+    # c = con.cursor()
+    #
+    # sql = "SELECT mac from TB_MAC"
+    # c.execute(sql)
+    # maclist = [item[0] for item in c.fetchall()]
+    maclist.append('88:36:6c:f7:4e:d2')
 ####  DB ####
 
 
@@ -73,9 +74,8 @@ def ControlPacket(packet):
     else:
         print("Success")
         packet.dst=server_mac
-        s.send(packet)
-        #sendp(packet,socket=conf.L2socket)
-        # sendpfast(packet,mbps=1000, loop=50000)
+        sendp(packet)
+        #sendpfast(packet,mbps=1000, loop=50000)
     #sys.exit()
 
 
