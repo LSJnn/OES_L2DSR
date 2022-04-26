@@ -2,6 +2,8 @@ import sys
 from scapy.all import *
 import sqlite3
 import threading
+from scapy.config import conf
+conf.prog.tcpreplay = "/to/tcpdump"
 
 ## lg     88-36-6c-f7-4e-d2 192.168.100.47
 ## L2DSR  70-5D-CC-FC-25-02 192.168.100.214
