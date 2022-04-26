@@ -5,20 +5,20 @@ import sqlite3
 import threading
 from collections import deque
 
-## lg     88-36-6c-f7-4e-d2 192.168.100.47
-## L2DSR  70-5D-CC-FC-25-02 192.168.100.214
-## git서버 70-5D-CC-F4-66-9A 192.168.100.49
+## lg     88:36:6c:f7:4e:d2 192.168.100.47
+## L2DSR  70:5d:cc:fc:25:02 192.168.100.214
+          #'70:5d:cc:f4:88:9a' 192.168.100.49
+## GH 임시 서버 b0:7b:25:07:f7:cc 192.168.100.49
 
 
 ##패킷 생성
 count = 1
 router_mac = '70:5d:cc:fc:25:02'
-server_mac = '70:5d:cc:f4:66:9a'
+server_mac = 'b0:7b:25:07:f7:cc'
 protocol_type = 'tcp'
-sniffing_time = 2
+
 maclist = []
 dq = deque()
-serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
 #### DB ####
 def ConnectDB():
@@ -26,13 +26,14 @@ def ConnectDB():
     con = sqlite3.connect("./DB/OE_L2DSR",isolation_level=None)
 
 def SelectMac():
+    print("start2")
     global maclist
     # c = con.cursor()
     #
     # sql = "SELECT mac from TB_MAC"
     # c.execute(sql)
     # maclist = [item[0] for item in c.fetchall()]
-    maclist.append('88:36:6c:f7:4e:d2')
+    maclist.append('70:5d:cc:f4:66:9a')
 ####  DB ####
 
 
@@ -42,35 +43,38 @@ def PacketThread():
     t.start()
 
 def Sniffing():
-    while(1):
-        pcap_file = sniff(prn=QueSocket,count=1,filter="tcp and ether dst %s" %router_mac)
+    while(1) :
+        print("start t1_1 대기중")
+        pcap_file = sniff(prn=QueSocket, count=1, filter="tcp and ether dst %s" %router_mac)
+        print("넣음")
 
 def QueSocket(socket):
     global dq
     dq.appendleft(socket)
-    print("넣음")
 
 ##QUE POP
 def SendPacketThread():
     t=threading.Thread(target=PopSocket)
+    print("start t2")
     t.start()
 
 def PopSocket():
+    global dq
     while(1) :
         if(dq.__len__() >0):
             packet = dq.pop()
             ControlPacket(packet)
 
 def ControlPacket(packet):
-    s=conf.L2socket
     global maclist
     sniff_maclist = maclist
     src_mac = packet.src
-    dst_mac = packet.dst
 
     if src_mac not in sniff_maclist :
         #db update
         sniff_maclist = maclist
+        # packet.dport=52525
+        # sendp(packet)
     else:
         print("Success")
         packet.dst=server_mac
@@ -79,8 +83,7 @@ def ControlPacket(packet):
     #sys.exit()
 
 
-
-ConnectDB()
+#ConnectDB()
 SelectMac()
 PacketThread()
 SendPacketThread()
