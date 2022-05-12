@@ -5,6 +5,9 @@ import threading
 import select
 import socket
 from collections import deque
+import ctypes
+from ipaddress import IPv4Address
+
 
 ## lg     88:36:6c:f7:4e:d2 192.168.100.47
 ## L2DSR  70:5d:cc:fc:25:02 192.168.100.214
@@ -73,10 +76,10 @@ def ControlPacket(packet):
     if src_mac not in sniff_maclist :
         print("FAIL")
         dest_port = '52523'
-        inst = PortFowarding(80, dest_ip, dest_port)
-        print("FAIL : "+str(inst.dest_port))
-        inst.init()
-        inst.service()
+        inst1 = PortFowarding(80, dest_ip, dest_port)
+        print("FAIL : "+str(inst1.dest_port))
+        inst1.init()
+        inst1.service()
         #db update
         sniff_maclist = maclist
     else:
@@ -139,10 +142,10 @@ class Forwarding(threading.Thread):
             return
 
 class PortFowarding(object):
-    def __init__(self, _source_port, _dest_ip, _dest_port):
+    def __init__(self, _source_port, _dest_ip):
         self.listen_port = int(_source_port)
         self.dest_ip = _dest_ip
-        self.dest_port = int(_dest_port)
+        self.dest_port =52892
 
         self.sock = None
 
@@ -152,15 +155,42 @@ class PortFowarding(object):
         self.sock.bind(('',self.listen_port))
         self.sock.listen(5)
 
+    def getmacaddress(self, host) :
+        """ Send ARP who-has request using Microsoft's Iphlpapi.lib
+          Args:
+              host (str): IP address to request
+          Returns:
+              True if IP address answers to ARP who-has, False otherwise
+          DWORD SendARP(
+          _In_    IPAddr DestIP,
+          _In_    IPAddr SrcIP,
+          _Out_   PULONG pMacAddr,
+          _Inout_ PULONG PhyAddrLen
+          );
+          DestIP is decimal value of inverted IP address, for instance :
+          10.0.0.103 => 103.0.0.10 => 1728053258
+          Microsoft recommands wsock32.inet_addr(), which I can't use with Python 3.
+          """
+
+        SendARP = ctypes.windll.Iphlpapi.SendARP
+        #inetaddr = ctypes.windll.wsock32.inet_addr(host) #Fonctionne uniquement sous Python 2
+        inetaddr = int(IPv4Address('.'.join(host.split(".")[::-1])))
+
+        buffer = ctypes.c_buffer(6)
+        addlen = ctypes.c_ulong(ctypes.sizeof(buffer))
+
+        if SendARP(inetaddr, 0, ctypes.byref(buffer), ctypes.byref(addlen)) == 0:
+            return True
+        return False
+
     def service(self):
         list_sockets = []
         while True:
             i, _, _ = select.select(list_sockets + [self.sock], [], [], 5)
-
             if self.sock in i:
                 conn, addr = self.sock.accept()
                 print ('ACCEPT {0}'.format(addr))
-
+                #self.getmacaddress(addr[0])
                 f = Forwarding(conn)
 
                 if not f.init(self.dest_ip, self.dest_port):
@@ -170,6 +200,8 @@ class PortFowarding(object):
                 f.start()
 
             print('in service...')
+
+
 ######################################################### MAIN ###############################################
     # if len(sys.argv) != 3:
     #     print('Invaild argument')
@@ -180,15 +212,16 @@ class PortFowarding(object):
     # dest_ip = sys.argv[2].split(':')[0]
     # dest_port = sys.argv[2].split(':')[1]
     #
-    # inst = PortFowarding(80, dest_ip, dest_port)
-    #
-    # inst.init()
-    # inst.service()
+dest_ip = '192.168.100.214'
+inst = PortFowarding('80', dest_ip)
 
-ConnectDB()
-SelectMac()
-PacketThread()
-SendPacketThread()
+inst.init()
+inst.service()
+
+# ConnectDB()
+# SelectMac()
+# PacketThread()
+# SendPacketThread()
 
 
 
